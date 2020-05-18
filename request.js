@@ -2,6 +2,7 @@
 
 var http = require('http')
 var https = require('https')
+var http2 = require('http2')
 var url = require('url')
 var util = require('util')
 var stream = require('stream')
@@ -144,7 +145,9 @@ Request.prototype.init = function (options) {
   // this function is called from both the constructor and on redirect.
   var self = this
   if (!options) {
-    options = {}
+    options = {
+      http2: false
+    }
   }
   self.headers = self.headers ? copy(self.headers) : {}
 
@@ -285,7 +288,7 @@ Request.prototype.init = function (options) {
   self._redirect.onRequest(options)
 
   self.setHost = false
-  if (!self.hasHeader('host')) {
+  if (!self.hasHeader('host') && !options.http2) {
     var hostHeaderName = self.originalHostHeaderName || 'host'
     self.setHeader(hostHeaderName, self.uri.host)
     // Drop :port suffix from Host header if known protocol.
@@ -449,7 +452,10 @@ Request.prototype.init = function (options) {
   }
 
   var protocol = self.proxy && !self.tunnel ? self.proxy.protocol : self.uri.protocol
-  var defaultModules = {'http:': http, 'https:': https}
+  if (options.http2) {
+    protocol = 'http2';
+  }
+  var defaultModules = {'http:': http, 'https:': https, 'http2': http2}
   var httpModules = self.httpModules || {}
 
   self.httpModule = httpModules[protocol] || defaultModules[protocol]
